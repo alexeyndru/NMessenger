@@ -93,12 +93,18 @@ open class NMessengerViewController: UIViewController, UITextViewDelegate, NMess
         self.removeObservers()
     }
     
+    // MARK: constants
+    
+    let iPhoneXScreenHeight: CGFloat = 1792.0
+    let heightDifferenceiPhoneX: CGFloat = 87.0
+    let heightDifferenceiPhone: CGFloat = 49.0
+    
     // MARK: Initialisers helper methods
     /**
      Adds observer for UIKeyboardWillChangeFrameNotification
      */
     fileprivate func addObservers() {
-        NotificationCenter.default.addObserver(self, selector: #selector(NMessengerViewController.keyboardNotification(_:)), name: NSNotification.Name.UIKeyboardWillChangeFrame, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(NMessengerViewController.keyboardNotification(_:)), name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
     }
     /**
      Removes observer for UIKeyboardWillChangeFrameNotification
@@ -121,7 +127,7 @@ open class NMessengerViewController: UIViewController, UITextViewDelegate, NMess
         setUpConstraintsForViews()
         //swipe down
         let swipeDown = UISwipeGestureRecognizer(target: self, action: #selector(NMessengerViewController.respondToSwipeGesture(_:)))
-        swipeDown.direction = UISwipeGestureRecognizerDirection.down
+        swipeDown.direction = UISwipeGestureRecognizer.Direction.down
         self.inputBarView.textInputAreaView.addGestureRecognizer(swipeDown)
     }
     
@@ -192,25 +198,28 @@ open class NMessengerViewController: UIViewController, UITextViewDelegate, NMess
     /**
      Moves InputBarView up and down accoridng to the location of the keyboard
      */
-    func keyboardNotification(_ notification: Notification) {
+    @objc func keyboardNotification(_ notification: Notification) {
         if let userInfo = (notification as NSNotification).userInfo {
-            let endFrame = (userInfo[UIKeyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue
-            let duration:TimeInterval = (userInfo[UIKeyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0
-            let animationCurveRawNSN = userInfo[UIKeyboardAnimationCurveUserInfoKey] as? NSNumber
-            let animationCurveRaw = animationCurveRawNSN?.uintValue ?? UIViewAnimationOptions().rawValue
-            let animationCurve:UIViewAnimationOptions = UIViewAnimationOptions(rawValue: animationCurveRaw)
-            if endFrame?.origin.y >= UIScreen.main.bounds.size.height {
-                self.inputBarBottomSpacing.constant = 0
+            let endFrame = (userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue
+            let duration:TimeInterval = (userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0
+            let animationCurveRawNSN = userInfo[UIResponder.keyboardAnimationCurveUserInfoKey] as? NSNumber
+            let animationCurveRaw = animationCurveRawNSN?.uintValue ?? UIView.AnimationOptions().rawValue
+            let animationCurve:UIView.AnimationOptions = UIView.AnimationOptions(rawValue: animationCurveRaw)
+            if endFrame?.origin.y >= self.view.bounds.size.height {
                 self.isKeyboardIsShown = false
+                self.inputBarBottomSpacing.constant = 0.0
             } else {
-                if self.inputBarBottomSpacing.constant==0{
-                    self.inputBarBottomSpacing.constant -= endFrame?.size.height ?? 0.0
+                var inputBarBottomSpacingConstant : CGFloat = 0.0
+                if UIScreen.main.nativeBounds.height >= iPhoneXScreenHeight {
+                    if let h = endFrame?.size.height {
+                        inputBarBottomSpacingConstant = -h + heightDifferenceiPhoneX
+                    }
+                } else {
+                    if let h = endFrame?.size.height {
+                        inputBarBottomSpacingConstant = -h + heightDifferenceiPhone
+                    }
                 }
-                else
-                {
-                    self.inputBarBottomSpacing.constant = 0
-                    self.inputBarBottomSpacing.constant -= endFrame?.size.height ?? 0.0
-                }
+                self.inputBarBottomSpacing.constant = inputBarBottomSpacingConstant
                 self.isKeyboardIsShown = true
             }
             
@@ -232,7 +241,7 @@ open class NMessengerViewController: UIViewController, UITextViewDelegate, NMess
     /**
      Closes the messenger on swipe on InputBarView
      */
-    func respondToSwipeGesture(_ gesture: UIGestureRecognizer) {
+    @objc func respondToSwipeGesture(_ gesture: UIGestureRecognizer) {
         self.inputBarView.textInputView.resignFirstResponder()
     }
     
